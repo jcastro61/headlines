@@ -16,18 +16,29 @@ RSS_FEEDS = {
               'reuters-science': 'http://feeds.reuters.com/reuters/scienceNews',
               'reuters-topnews': 'http://feeds.reuters.com/reuters/topNews'
               }
-
+DEFAULTS = {'publication': 'bbc',
+            'city': 'London, UK'}
 
 @app.route("/")
-def get_news():
-    query = request.form.get("publication")
+def home():
+    publication = request.args.get('publication')
+    if not publication:
+        publication = DEFAULTS['publication']
+    articles = get_news(publication)
+    city = request.args.get('city')
+    if not city:
+        city = DEFAULTS['city']
+    weather = get_weather(city)
+    return render_template("home.html", articles=articles['entries'], weather=weather)
+
+
+def get_news(query):
     if not query or query.lower() not in RSS_FEEDS:
         publication = 'bbc'
     else:
         publication = query.lower()
     feed = feedparser.parse(RSS_FEEDS[publication])
-    weather = get_weather("New York, US")
-    return render_template("home.html", articles=feed['entries'], weather=weather)
+    return feed
 
 
 def get_weather(query):
@@ -38,10 +49,12 @@ def get_weather(query):
     parsed = json.loads(data)
     weather = None
     if parsed.get("weather"):
-        weather = {"descrition":
-                   parsed['weather'][0] ['description']
-                   }
-    return
+        weather = {"description": parsed["weather"][0] ['description'],
+                   "temperature" : parsed["main"]['temp'],
+                   "city": parsed['name'],
+                   "country": parsed['sys']['country']
+                  }
+    return weather
 
 
 if __name__ == '__main__':
